@@ -7,6 +7,7 @@ Prometheus metrics, and a deliberately thin Next.js/MapLibre interface.
 ```mermaid
 flowchart LR
   Browser[Next.js + MapLibre] --> API[Fastify API]
+  API --> OSRM[OSRM driving-distance table]
   API --> Redis[(Redis cache)]
   API --> PG[(PostgreSQL + PostGIS)]
   CSV[OSM-derived normalized CSV] --> Importer[Idempotent importer] --> PG
@@ -32,8 +33,16 @@ starts the entire stack.
 
 The dashboard starts at the arithmetic mean of Long Beach's OpenStreetMap city bounds.
 Users can recenter by Long Beach address, neighborhood, ZIP code, or latitude/longitude;
-the selected point becomes the proximity-ranking origin. The interactive CARTO Voyager
-basemap and geocoder retain OpenStreetMap/CARTO attribution.
+the light-blue pin is the proximity-ranking origin. The Home control returns to the city
+extent, result markers can be selected by double-clicking, and a separate amber marker
+identifies the selected search result. Categories are preloaded from the Long Beach place
+taxonomy, and distances can be displayed in imperial or metric units.
+
+Candidate pruning remains local PostGIS geography, but every displayed distance and the
+final proximity score use the OSRM driving-road table rather than a straight line. Set
+`OSRM_URL` to a self-hosted OSRM instance for production; the public demo server is the
+local portfolio default. The interactive CARTO Voyager basemap and geocoder retain
+OpenStreetMap/CARTO attribution.
 
 ```bash
 curl 'http://localhost:4000/api/v1/places/search?q=coffee&lat=33.7701&lon=-118.1937&radius_m=5000'

@@ -19,10 +19,15 @@ import {
 } from '@location/shared';
 import { PostgresPlaceRepository, type PlaceRepository } from '@location/db';
 import { RedisCache, type Cache } from './cache.js';
+import {
+  OsrmRoadDistanceService,
+  type RoadDistanceService,
+} from './road-distance.js';
 
 export type AppDependencies = {
   repository?: PlaceRepository;
   cache?: Cache;
+  roadDistance?: RoadDistanceService;
   version?: string;
 };
 
@@ -34,6 +39,7 @@ export function buildApp(deps: AppDependencies = {}) {
   });
   const repository = deps.repository ?? new PostgresPlaceRepository();
   const cache = deps.cache ?? new RedisCache();
+  const roadDistance = deps.roadDistance ?? new OsrmRoadDistanceService();
   const registry = new Registry();
   collectDefaultMetrics({ register: registry, prefix: 'location_search_' });
   const requests = new Counter({
@@ -247,6 +253,34 @@ export function buildApp(deps: AppDependencies = {}) {
       data: await cached(key, 120, () =>
         repository.autocomplete(query.q, query.limit),
       ),
+    };
+  });
+
+  app.post('/api/v1/routes/distances', async (request) => {
+    const coordinate = z.object({
+      latitude: z.number().min(-90).max(90),
+      longitude: z.number().min(-180).max(180),
+    });
+    const body = z
+      .object({
+        origin: coordinate,
+        destinations: z
+          .array(coordinate.extend({ id: z.string().min(1).max(128) }))
+          .min(1)
+          .max(40),
+      })
+      .parse(request.body);
+    const distances = await roadDistance.distances(
+      body.origin,
+      body.destinations,
+    );
+    return {
+      data: body.destinations.map((destination, index) => ({
+        id: destination.id,
+        distanceM: distances[index],
+      })),
+      profile: 'driving',
+      calculation: 'road-network',
     };
   });
 

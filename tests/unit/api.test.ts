@@ -83,4 +83,32 @@ describe('API', () => {
     expect(r.statusCode).toBe(404);
     await app.close();
   });
+  it('returns driving distances from the road network service', async () => {
+    const app = buildApp({
+      repository: new Repo(),
+      cache: new MemoryCache(),
+      roadDistance: { distances: async () => [1450] },
+    });
+    const r = await app.inject({
+      method: 'POST',
+      url: '/api/v1/routes/distances',
+      payload: {
+        origin: { latitude: 33.78, longitude: -118.16 },
+        destinations: [
+          {
+            id: sample.id,
+            latitude: sample.latitude,
+            longitude: sample.longitude,
+          },
+        ],
+      },
+    });
+    expect(r.statusCode).toBe(200);
+    expect(r.json()).toMatchObject({
+      data: [{ id: sample.id, distanceM: 1450 }],
+      profile: 'driving',
+      calculation: 'road-network',
+    });
+    await app.close();
+  });
 });

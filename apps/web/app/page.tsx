@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Place } from '@location/shared';
+import { scorePlace, type Place } from '@location/shared';
 import maplibregl, {
   Map as MapLibreMap,
   Marker,
@@ -18,6 +18,28 @@ const LONG_BEACH_MEAN_CENTER: [number, number] = [
   (LONG_BEACH_BOUNDS.west + LONG_BEACH_BOUNDS.east) / 2,
   (LONG_BEACH_BOUNDS.south + LONG_BEACH_BOUNDS.north) / 2,
 ];
+const PRELOADED_CATEGORIES = [
+  'restaurant',
+  'fast food',
+  'cafe',
+  'park',
+  'school',
+  'convenience',
+  'clinic',
+  'hairdresser',
+  'car repair',
+  'clothes',
+  'bank',
+  'fuel',
+  'supermarket',
+  'fitness centre',
+  'motel',
+  'bar',
+  'dentist',
+  'hotel',
+  'pharmacy',
+  'post office',
+] as const;
 const VOYAGER_STYLE: StyleSpecification = {
   version: 8,
   sources: {
@@ -40,6 +62,21 @@ type GeocoderResult = {
   lon: string;
   display_name: string;
 };
+
+type DistanceUnit = 'metric' | 'imperial';
+
+function formatDistance(distanceM: number | undefined, unit: DistanceUnit) {
+  if (distanceM === undefined) return '—';
+  if (unit === 'imperial') {
+    const feet = distanceM * 3.28084;
+    return feet < 5280
+      ? `${Math.round(feet)} ft`
+      : `${(feet / 5280).toFixed(1)} mi`;
+  }
+  return distanceM < 1000
+    ? `${Math.round(distanceM)} m`
+    : `${(distanceM / 1000).toFixed(1)} km`;
+}
 
 function coordinatesFromInput(value: string): [number, number] | undefined {
   const match = value.match(
@@ -71,14 +108,30 @@ export default function Home() {
   const [locationStatus, setLocationStatus] = useState<
     'idle' | 'loading' | 'error'
   >('idle');
+  const [distanceStatus, setDistanceStatus] = useState<
+    'idle' | 'loading' | 'error'
+  >('idle');
+  const [distanceUnit, setDistanceUnit] = useState<DistanceUnit>('imperial');
   const markers = useRef<Marker[]>([]);
   const centerMarker = useRef<Marker | null>(null);
   const searchCenter = useRef<[number, number]>(LONG_BEACH_MEAN_CENTER);
   const categories = useMemo(
-    () =>
-      [...new Set(places.map((p) => p.category).filter(Boolean))] as string[],
+    () => [
+      ...new Set([
+        ...PRELOADED_CATEGORIES,
+        ...(places.map((place) => place.category).filter(Boolean) as string[]),
+      ]),
+    ],
     [places],
   );
+
+  function selectPlace(place: Place) {
+    setSelected(place);
+    mapRef.current?.flyTo({
+      center: [place.longitude, place.latitude],
+      zoom: 15,
+    });
+  }
 
   async function search(
     lat = searchCenter.current[1],
@@ -97,12 +150,82 @@ export default function Home() {
       const response = await fetch(`${API}/api/v1/places/search?${params}`);
       if (!response.ok) throw new Error();
       const body = await response.json();
-      setPlaces(body.data);
-      setSelected(body.data[0]);
+      const candidates = body.data as Place[];
+      if (!candidates.length) {
+        setPlaces([]);
+        setSelected(undefined);
+        setDistanceStatus('idle');
+        setStatus('idle');
+        return;
+      }
+      setDistanceStatus('loading');
+      const routeResponse = await fetch(`${API}/api/v1/routes/distances`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          origin: { latitude: lat, longitude: lon },
+          destinations: candidates.map((place) => ({
+            id: place.id,
+            latitude: place.latitude,
+            longitude: place.longitude,
+          })),
+        }),
+      });
+      if (!routeResponse.ok) throw new Error();
+      const routeBody = (await routeResponse.json()) as {
+        data: Array<{ id: string; distanceM: number | null }>;
+      };
+      const roadDistances = new Map(
+        routeBody.data.map((result) => [result.id, result.distanceM]),
+      );
+      const ranked = candidates
+        .map((place) => {
+          const distance = roadDistances.get(place.id);
+          const distanceM = distance === null ? undefined : distance;
+          if (!place.scoreComponents) return { ...place, distanceM };
+          const ranking = scorePlace({
+            textSimilarity: place.scoreComponents.text,
+            distanceM,
+            popularityScore: place.popularityScore,
+            categoryMatch: place.scoreComponents.category === 1,
+            radiusM: 15_000,
+          });
+          return {
+            ...place,
+            distanceM,
+            score: ranking.score,
+            scoreComponents: ranking.components,
+          };
+        })
+        .sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
+      setPlaces(ranked);
+      setSelected(ranked[0]);
+      setDistanceStatus('idle');
       setStatus('idle');
     } catch {
+      setPlaces([]);
+      setSelected(undefined);
+      setDistanceStatus('error');
       setStatus('error');
     }
+  }
+
+  function returnHome() {
+    searchCenter.current = LONG_BEACH_MEAN_CENTER;
+    setLocationQuery('');
+    setLocationLabel('Long Beach mean center');
+    const map = mapRef.current;
+    if (map) {
+      map.fitBounds(
+        [
+          [LONG_BEACH_BOUNDS.west, LONG_BEACH_BOUNDS.south],
+          [LONG_BEACH_BOUNDS.east, LONG_BEACH_BOUNDS.north],
+        ],
+        { padding: 36, duration: 800 },
+      );
+      centerMarker.current?.setLngLat(LONG_BEACH_MEAN_CENTER);
+    }
+    void search(LONG_BEACH_MEAN_CENTER[1], LONG_BEACH_MEAN_CENTER[0]);
   }
 
   function moveToLocation(
@@ -116,7 +239,7 @@ export default function Home() {
     if (!map) return;
     map.flyTo({ center: coordinates, zoom });
     centerMarker.current?.remove();
-    centerMarker.current = new maplibregl.Marker({ color: '#f7b32b' })
+    centerMarker.current = new maplibregl.Marker({ color: '#57c7ff' })
       .setLngLat(coordinates)
       .setPopup(
         new maplibregl.Popup({ offset: 22 }).setText(`Search center: ${label}`),
@@ -181,7 +304,7 @@ export default function Home() {
       new maplibregl.NavigationControl(),
       'bottom-right',
     );
-    centerMarker.current = new maplibregl.Marker({ color: '#f7b32b' })
+    centerMarker.current = new maplibregl.Marker({ color: '#57c7ff' })
       .setLngLat(LONG_BEACH_MEAN_CENTER)
       .setPopup(
         new maplibregl.Popup({ offset: 22 }).setText(
@@ -198,15 +321,26 @@ export default function Home() {
   }, []);
   useEffect(() => {
     markers.current.forEach((m) => m.remove());
-    markers.current = places.map((place) =>
-      new maplibregl.Marker({
+    markers.current = places.map((place) => {
+      const marker = new maplibregl.Marker({
         color: selected?.id === place.id ? '#f7b32b' : '#103c46',
       })
         .setLngLat([place.longitude, place.latitude])
-        .setPopup(new maplibregl.Popup({ offset: 22 }).setText(place.name))
-        .addTo(mapRef.current!),
-    );
-  }, [places, selected]);
+        .setPopup(
+          new maplibregl.Popup({ offset: 22 }).setText(
+            `${place.name} · ${formatDistance(place.distanceM, distanceUnit)} by road`,
+          ),
+        )
+        .addTo(mapRef.current!);
+      marker.getElement().addEventListener('dblclick', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        selectPlace(place);
+      });
+      marker.getElement().title = `Double-click to select ${place.name}`;
+      return marker;
+    });
+  }, [places, selected, distanceUnit]);
 
   return (
     <main>
@@ -256,6 +390,18 @@ export default function Home() {
             ))}
           </select>
         </label>
+        <label>
+          <span>Distance units</span>
+          <select
+            value={distanceUnit}
+            onChange={(event) =>
+              setDistanceUnit(event.target.value as DistanceUnit)
+            }
+          >
+            <option value="imperial">Imperial</option>
+            <option value="metric">Metric</option>
+          </select>
+        </label>
         <button
           className="secondary"
           onClick={() => void centerAroundLocation()}
@@ -285,8 +431,10 @@ export default function Home() {
               {status === 'loading'
                 ? 'Searching…'
                 : status === 'error'
-                  ? 'API unavailable'
-                  : 'Ranked for you'}
+                  ? 'Search or road router unavailable'
+                  : distanceStatus === 'loading'
+                    ? 'Calculating road distances…'
+                    : 'Ranked by road distance'}
             </span>
           </div>
           <div className="results">
@@ -294,13 +442,7 @@ export default function Home() {
               <button
                 key={place.id}
                 className={`result ${selected?.id === place.id ? 'active' : ''}`}
-                onClick={() => {
-                  setSelected(place);
-                  mapRef.current?.flyTo({
-                    center: [place.longitude, place.latitude],
-                    zoom: 15,
-                  });
-                }}
+                onClick={() => selectPlace(place)}
               >
                 <span className="rank">
                   {String(index + 1).padStart(2, '0')}
@@ -313,19 +455,20 @@ export default function Home() {
                       .join(' · ')}
                   </small>
                 </span>
-                <em>
-                  {place.distanceM === undefined
-                    ? ''
-                    : place.distanceM < 1000
-                      ? `${Math.round(place.distanceM)} m`
-                      : `${(place.distanceM / 1000).toFixed(1)} km`}
-                </em>
+                <em>{formatDistance(place.distanceM, distanceUnit)}</em>
               </button>
             ))}
           </div>
         </aside>
         <div className="map" ref={mapNode}>
           <span className="map-label">LIVE MAP</span>
+          <button
+            className="map-home"
+            onClick={returnHome}
+            title="Return to Long Beach extent"
+          >
+            ⌂ Home
+          </button>
           <a
             className="data-attribution"
             href="https://www.openstreetmap.org/copyright"
@@ -355,9 +498,7 @@ export default function Home() {
               <div>
                 <dt>Distance</dt>
                 <dd>
-                  {selected.distanceM
-                    ? `${Math.round(selected.distanceM)} m`
-                    : '—'}
+                  {formatDistance(selected.distanceM, distanceUnit)} by road
                 </dd>
               </div>
               <div>
