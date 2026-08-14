@@ -166,6 +166,14 @@ export default function Home() {
         </aside>
         <div className="map" ref={mapNode}>
           <span className="map-label">LIVE MAP</span>
+          <a
+            className="data-attribution"
+            href="https://www.openstreetmap.org/copyright"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Place data © OpenStreetMap contributors · ODbL
+          </a>
         </div>
         {selected && (
           <article className="detail">

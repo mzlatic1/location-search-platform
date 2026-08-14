@@ -156,6 +156,16 @@ aside {
   font-size: 0.62rem;
   letter-spacing: 0.18em;
 }
+.data-attribution {
+  position: absolute;
+  z-index: 1;
+  left: 10px;
+  bottom: 10px;
+  padding: 5px 7px;
+  background: rgba(255, 253, 248, 0.9);
+  color: var(--ink);
+  font-size: 0.62rem;
+}
 .detail {
   position: absolute;
   z-index: 2;

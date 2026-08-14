@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
     "test:integration": "vitest run tests/integration",
-    "import:data": "pnpm --filter @location/api import:data"
+    "import:data": "pnpm --filter @location/api import:data",
+    "fetch:long-beach": "pnpm --filter @location/api fetch:long-beach"
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",

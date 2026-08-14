@@ -117,7 +117,7 @@ export class PostgresPlaceRepository implements PlaceRepository {
     const cursor = input.cursor;
     if (cursor) values.push(cursor.score, cursor.distance ?? null, cursor.id);
     const distance = `CASE WHEN $2::float8 IS NULL THEN NULL ELSE ST_Distance(geom, ST_SetSRID(ST_MakePoint($3,$2),4326)::geography) END`;
-    const textScore = `CASE WHEN $1 = '' THEN 0 ELSE GREATEST(similarity(normalized_name, lower($1)), CASE WHEN normalized_name LIKE lower($1) || '%' THEN 1 ELSE 0 END) END`;
+    const textScore = `CASE WHEN $1 = '' THEN 0 ELSE GREATEST(similarity(search_text, lower($1)), CASE WHEN search_text LIKE lower($1) || '%' THEN 1 ELSE 0 END) END`;
     const proximity = `CASE WHEN $2::float8 IS NULL THEN 0 ELSE GREATEST(0, 1 - (${distance} / $4)) END`;
     const categoryScore = `CASE WHEN $5::text IS NOT NULL AND category = $5 THEN 1 ELSE 0 END`;
     const score = `((${textScore}) * .55 + (${proximity}) * .25 + popularity_score * .15 + (${categoryScore}) * .05)`;
@@ -135,7 +135,7 @@ export class PostgresPlaceRepository implements PlaceRepository {
         SELECT *, ${distance} AS distance_m, ${textScore} AS text_score,
           ${proximity} AS proximity_score, ${categoryScore} AS category_score, ${score} AS score
         FROM places
-        WHERE ($1 = '' OR normalized_name % lower($1) OR normalized_name LIKE lower($1) || '%')
+        WHERE ($1 = '' OR search_text % lower($1) OR search_text LIKE '%' || lower($1) || '%')
           AND ($5::text IS NULL OR category = $5)
           AND ($2::float8 IS NULL OR ST_DWithin(geom, ST_SetSRID(ST_MakePoint($3,$2),4326)::geography, $4))
       )

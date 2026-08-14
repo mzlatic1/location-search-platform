@@ -21,7 +21,8 @@ cp .env.example .env
 corepack enable
 pnpm install
 docker compose up -d postgres redis
-pnpm import:data -- --file data/sample-places.csv
+pnpm fetch:long-beach -- --output ../../data/long-beach-osm.csv
+IMPORT_SOURCE=openstreetmap pnpm import:data -- --file ../../data/long-beach-osm.csv
 pnpm dev
 ```
 
@@ -37,11 +38,15 @@ curl 'http://localhost:4000/api/v1/places/bbox?west=-118.21&south=33.75&east=-11
 
 ## Dataset contract
 
-The checked-in four-row fixture proves the path without pretending to be a benchmark.
-For a real run, export OpenStreetMap POIs into the documented normalized CSV columns,
-then run the same importer. Large data is intentionally ignored by Git. The importer
-upserts `(source, source_id)`, rejects invalid coordinates, and records every run in
-`import_batches`.
+The reproducible fetch command queries named places within the actual Long Beach,
+California administrative boundary (`wikidata=Q16739`) from OpenStreetMap through
+Overpass, then writes the documented normalized CSV contract. Large generated extracts
+are intentionally ignored by Git. The checked-in four-row fixture remains for offline
+correctness checks only. The importer upserts `(source, source_id)`, rejects invalid
+coordinates, and records every run in `import_batches`.
+
+OpenStreetMap place data is © OpenStreetMap contributors and available under the ODbL;
+the application displays this attribution next to the map.
 
 ## Engineering highlights
 

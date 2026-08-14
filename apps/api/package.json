@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "import:data": "tsx src/import-data.ts"
+    "import:data": "tsx src/import-data.ts",
+    "fetch:long-beach": "tsx src/fetch-osm.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.1.0",
