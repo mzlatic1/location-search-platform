@@ -1,7 +1,7 @@
 # Atlas session handoff
 
-**Status:** User-accepted application; current documentation/agent workflow complete and
-ready for a future Codex or Claude Code session.
+**Status:** User-accepted application; documentation and cross-tool agent workflow are
+complete, final wrap-up is complete, and all Docker containers are intentionally stopped.
 
 **Last updated:** 2026-08-13 PDT
 
@@ -26,9 +26,9 @@ ready for a future Codex or Claude Code session.
 
 ## Current accepted application
 
-The app at `http://localhost:3000` contains 4,485 actual named Long Beach places. It uses
-CARTO Voyager, a light-blue origin, amber selection, Home control, preloaded categories,
-imperial/metric display, and OSRM road-network distance.
+When started, the app at `http://localhost:3000` contains 4,485 actual named Long Beach
+places. It uses CARTO Voyager, a light-blue origin, amber selection, Home control,
+preloaded categories, imperial/metric display, and OSRM road-network distance.
 
 Selection by panel, marker click, or double-click zooms consistently. The selected OSRM
 road path is framed on the map and its widget reports origin, destination, road distance,
@@ -47,18 +47,29 @@ workspace TypeScript        passed
 Vitest                      14 passed
 production workspace build passed
 git diff --check            passed
-Docker Compose              API/web up; PostgreSQL and Redis healthy
+Docker Compose smoke        API/web up; PostgreSQL and Redis healthy before shutdown
 GET /health                 database=true, redis=true
 GET http://localhost:3000   HTTP 200
+GitHub Actions CI           run 31775462228 passed
 ```
 
-The requested demo stack remains running. No runtime code or data changed in this final
-documentation session.
+## Final closeout state
+
+On 2026-08-13, the user requested a complete shutdown and wrap-up. All 17 running Docker
+containers on the host were stopped successfully, including Atlas API, web, PostgreSQL,
+and Redis. `docker ps` returned no running containers afterward. Containers and persistent
+volumes were not removed, so a future approved session can restart this stack with
+`docker compose up -d` (or `docker compose up --build` when rebuilding is required).
+
+No runtime code or application data changed during closeout. The final documentation-only
+wrap records service shutdown and preserves the previously observed application and CI
+evidence without representing the URLs as currently available.
 
 ## Next session
 
 Execute the mandatory startup protocol in `AGENTS.md` (Claude Code may use
-`/session-start`). The only known proposed portfolio work is a representative 100K+
-indexed EXPLAIN/k6 run and a real UI screenshot. Start it only after explicit user
-approval, use `docs/database-indexes.md`, and record only measured environment/commands/
-results. It is not required to preserve the accepted current application.
+`/session-start`). Expect no Docker containers to be running; inspect state first and start
+only the services needed for an approved task. The only known proposed portfolio work is
+a representative 100K+ indexed EXPLAIN/k6 run and a real UI screenshot. Start it only
+after explicit user approval, use `docs/database-indexes.md`, and record only measured
+environment/commands/results. It is not required to preserve the accepted application.
