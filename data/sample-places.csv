@@ -1,0 +1,5 @@
+source_id,name,category,subcategory,address_line1,locality,region,postal_code,country_code,latitude,longitude,popularity_score,metadata
+demo-1,Harbor Coffee,cafe,coffee shop,100 Pine Ave,Long Beach,CA,90802,US,33.7683,-118.1915,0.82,"{}"
+demo-2,Aquarium of the Pacific,attraction,aquarium,100 Aquarium Way,Long Beach,CA,90802,US,33.7622,-118.1969,0.95,"{}"
+demo-3,Shoreline Park,park,waterfront park,200 Aquarium Way,Long Beach,CA,90802,US,33.7617,-118.1909,0.74,"{}"
+demo-4,Café Sevilla,restaurant,spanish,140 Pine Ave,Long Beach,CA,90802,US,33.7690,-118.1924,0.68,"{""unicode_fixture"":true}"

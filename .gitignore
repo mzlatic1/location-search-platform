@@ -8,4 +8,5 @@ coverage/
 *.tsbuildinfo
 data/*.csv
 data/*.geojson
+!data/sample-places.csv
 benchmark-results/*.json

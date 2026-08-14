@@ -115,11 +115,7 @@ export class PostgresPlaceRepository implements PlaceRepository {
       input.limit,
     ];
     const cursor = input.cursor;
-    values.push(
-      cursor?.score ?? null,
-      cursor?.distance ?? null,
-      cursor?.id ?? null,
-    );
+    if (cursor) values.push(cursor.score, cursor.distance ?? null, cursor.id);
     const distance = `CASE WHEN $2::float8 IS NULL THEN NULL ELSE ST_Distance(geom, ST_SetSRID(ST_MakePoint($3,$2),4326)::geography) END`;
     const textScore = `CASE WHEN $1 = '' THEN 0 ELSE GREATEST(similarity(normalized_name, lower($1)), CASE WHEN normalized_name LIKE lower($1) || '%' THEN 1 ELSE 0 END) END`;
     const proximity = `CASE WHEN $2::float8 IS NULL THEN 0 ELSE GREATEST(0, 1 - (${distance} / $4)) END`;
