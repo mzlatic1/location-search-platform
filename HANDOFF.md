@@ -21,8 +21,8 @@ and production Docker API/web builds passed. The live path check from the Long B
 center returned a 6,322.7 m driving route with 262 coordinates, and all compose services
 are running.
 
-First after the next `/compact`, have the user click a result marker and confirm the
-light-blue pathway, framing, route widget, and score hover explanation. If accepted, the
-intentionally remaining portfolio-evidence step is the indexed EXPLAIN/k6 procedure at
-representative 100K+ scale plus a real UI screenshot. Record only measured results in
-`docs/database-indexes.md`; do not redesign the architecture first.
+The user accepted this build on 2026-08-13; do not rework the route widget or rank
+explanations after the next `/compact`. The intentionally remaining portfolio-evidence
+step is the indexed EXPLAIN/k6 procedure at representative 100K+ scale plus a real UI
+screenshot. Start that only when the user asks to proceed, record only measured results
+in `docs/database-indexes.md`, and do not redesign the architecture first.
