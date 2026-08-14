@@ -25,3 +25,11 @@ TTL. **Why:** semantics are clear and cache loss cannot change truth.
 
 **Decision:** score/distance/UUID cursor rather than offset. **Why:** stable complexity and
 deterministic page boundaries for an unchanged dataset.
+
+## ADR-006 — One cross-tool engineering contract
+
+**Decision:** `AGENTS.md` is the tool-neutral repository instruction source and
+`CLAUDE.md` imports it; requirements, design, workflow, and handoff state remain separate
+tracked documents. **Why:** Codex and Claude Code must start, implement, validate, and wrap
+with the same invariants without duplicating rules that can drift. Tool-specific commands
+may route into the shared protocol but cannot override it.

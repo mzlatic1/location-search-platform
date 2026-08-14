@@ -9,6 +9,8 @@
 - [x] Milestone 6 — responsive MapLibre map/list UI
 - [x] Milestone 7 — tests, k6 scenarios, operations and scaling documentation
 - [x] Milestone 8 — actual Long Beach OSM boundary fetch, import, search, and attribution
+- [x] Milestone 9 — shared Codex/Claude instructions, session protocols, requirements,
+      design baseline, traceability, and standard engineering workflow
 - [ ] Record a large real-dataset benchmark and screenshots on the target machine
 
 The final checkbox is deliberately operational: measurements and screenshots must be

@@ -4,6 +4,15 @@ A production-minded location discovery vertical slice: Fastify + PostGIS candida
 retrieval, explicit relevance scoring, stable cursor pagination, Redis acceleration,
 Prometheus metrics, and a deliberately thin Next.js/MapLibre interface.
 
+## Coding-agent workflow
+
+Codex and Claude Code use the same repository contract. Codex loads
+[`AGENTS.md`](AGENTS.md) directly; [`CLAUDE.md`](CLAUDE.md) imports it, and Claude also
+offers `/session-start` and `/session-wrap` convenience commands. Start with the canonical
+[requirements](docs/requirements.md), [design](docs/design.md),
+[engineering workflow](docs/engineering-workflow.md), and current [handoff](HANDOFF.md).
+Do not implement a proposed handoff item without explicit approval.
+
 ```mermaid
 flowchart LR
   Browser[Next.js + MapLibre] --> API[Fastify API]
@@ -80,6 +89,9 @@ docker compose up -d postgres redis
 pnpm test:integration       # integration suite when Docker is available
 k6 run load-tests/mixed.js  # after importing a representative dataset
 ```
+
+The full completion gate, including formatting and documentation checks, is defined in
+[`docs/engineering-workflow.md`](docs/engineering-workflow.md).
 
 No benchmark result or screenshot is committed yet: these must be captured from an
 actual representative (target 100K+) import. See [performance runbook](docs/database-indexes.md).
