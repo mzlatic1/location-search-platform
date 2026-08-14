@@ -30,6 +30,11 @@ Open `http://localhost:3000`; API documentation is at `http://localhost:4000/doc
 and Prometheus metrics at `/metrics`. Alternatively, `docker compose up --build`
 starts the entire stack.
 
+The dashboard starts at the arithmetic mean of Long Beach's OpenStreetMap city bounds.
+Users can recenter by Long Beach address, neighborhood, ZIP code, or latitude/longitude;
+the selected point becomes the proximity-ranking origin. The interactive CARTO Voyager
+basemap and geocoder retain OpenStreetMap/CARTO attribution.
+
 ```bash
 curl 'http://localhost:4000/api/v1/places/search?q=coffee&lat=33.7701&lon=-118.1937&radius_m=5000'
 curl 'http://localhost:4000/api/v1/places/nearby?lat=33.7701&lon=-118.1937&radius_m=1000'
@@ -72,7 +77,7 @@ actual representative (target 100K+) import. See [performance runbook](docs/data
 
 ## Intentional limits
 
-This MVP is a modular monolith, not a geocoder, route planner, social product, or
+This MVP is a modular monolith, not a general-purpose geocoder, route planner, social product, or
 premature microservice/Kubernetes deployment. Search-engine adoption is a measured
 future option, not résumé decoration. See [scaling](docs/scaling.md) and
 [decisions](docs/decisions.md).

@@ -20,7 +20,7 @@ main {
 }
 header {
   display: flex;
-  align-items: end;
+  align-items: flex-end;
   justify-content: space-between;
   border-bottom: 1px solid var(--line);
   padding-bottom: 20px;
@@ -44,9 +44,11 @@ header p {
 }
 .toolbar {
   display: grid;
-  grid-template-columns: 2fr 1fr auto auto;
+  grid-template-columns:
+    minmax(240px, 1.4fr) minmax(220px, 1.2fr) minmax(150px, 0.65fr)
+    auto auto auto;
   gap: 10px;
-  padding: 18px 0;
+  padding: 18px 0 30px;
 }
 .toolbar label {
   display: flex;
@@ -57,6 +59,20 @@ header p {
   font-size: 0.65rem;
   text-transform: uppercase;
   letter-spacing: 0.13em;
+}
+.toolbar .location-field {
+  position: relative;
+}
+.toolbar .location-field small {
+  position: absolute;
+  top: 68px;
+  left: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.66rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .toolbar input,
 .toolbar select,
@@ -83,7 +99,7 @@ header p {
   position: relative;
   display: grid;
   grid-template-columns: minmax(320px, 38%) 1fr;
-  height: calc(100vh - 235px);
+  height: calc(100vh - 247px);
   min-height: 520px;
   border: 1px solid var(--ink);
   background: #fffdf8;
@@ -223,6 +239,7 @@ dd {
   }
   .toolbar {
     grid-template-columns: 1fr 1fr;
+    padding-bottom: 32px;
   }
   .workspace {
     grid-template-columns: 1fr;
@@ -238,5 +255,10 @@ dd {
   }
   .detail {
     position: fixed;
+  }
+}
+@media (min-width: 761px) and (max-width: 1180px) {
+  .toolbar {
+    grid-template-columns: 1fr 1fr 1fr;
   }
 }
