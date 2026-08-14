@@ -284,6 +284,24 @@ export function buildApp(deps: AppDependencies = {}) {
     };
   });
 
+  app.post('/api/v1/routes/path', async (request) => {
+    const coordinate = z.object({
+      latitude: z.number().min(-90).max(90),
+      longitude: z.number().min(-180).max(180),
+    });
+    const body = z
+      .object({
+        origin: coordinate,
+        destination: coordinate,
+      })
+      .parse(request.body);
+    return {
+      data: await roadDistance.route(body.origin, body.destination),
+      profile: 'driving',
+      calculation: 'road-network',
+    };
+  });
+
   app.get('/api/v1/places/:id', async (request, reply) => {
     const { id } = z.object({ id: z.string().uuid() }).parse(request.params);
     const key = makeCacheKey('detail', { id });

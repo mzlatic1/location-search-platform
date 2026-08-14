@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { scorePlace, type Place } from '@location/shared';
 import maplibregl, {
+  GeoJSONSource,
   Map as MapLibreMap,
   Marker,
   type StyleSpecification,
@@ -65,6 +66,12 @@ type GeocoderResult = {
 
 type DistanceUnit = 'metric' | 'imperial';
 
+type RoadRoute = {
+  distanceM: number;
+  durationS: number;
+  geometry: { type: 'LineString'; coordinates: number[][] };
+};
+
 function formatDistance(distanceM: number | undefined, unit: DistanceUnit) {
   if (distanceM === undefined) return '—';
   if (unit === 'imperial') {
@@ -76,6 +83,23 @@ function formatDistance(distanceM: number | undefined, unit: DistanceUnit) {
   return distanceM < 1000
     ? `${Math.round(distanceM)} m`
     : `${(distanceM / 1000).toFixed(1)} km`;
+}
+
+function formatDuration(durationS: number) {
+  const minutes = Math.max(1, Math.round(durationS / 60));
+  return `${minutes} min estimated drive`;
+}
+
+function rankingExplanation(place: Place) {
+  const components = place.scoreComponents;
+  if (!components) return 'Ranking components are unavailable.';
+  return [
+    `Score ${place.score?.toFixed(3) ?? '—'} =`,
+    `55% text relevance (${components.text.toFixed(2)}) +`,
+    `25% road proximity (${components.proximity.toFixed(2)}) +`,
+    `15% popularity (${components.popularity.toFixed(2)}) +`,
+    `5% category match (${components.category.toFixed(2)}).`,
+  ].join(' ');
 }
 
 function coordinatesFromInput(value: string): [number, number] | undefined {
@@ -112,9 +136,14 @@ export default function Home() {
     'idle' | 'loading' | 'error'
   >('idle');
   const [distanceUnit, setDistanceUnit] = useState<DistanceUnit>('imperial');
+  const [roadRoute, setRoadRoute] = useState<RoadRoute>();
+  const [roadRouteStatus, setRoadRouteStatus] = useState<
+    'idle' | 'loading' | 'error'
+  >('idle');
   const markers = useRef<Marker[]>([]);
   const centerMarker = useRef<Marker | null>(null);
   const searchCenter = useRef<[number, number]>(LONG_BEACH_MEAN_CENTER);
+  const routeRequest = useRef(0);
   const categories = useMemo(
     () => [
       ...new Set([
@@ -125,12 +154,83 @@ export default function Home() {
     [places],
   );
 
+  function drawRoadRoute(route?: RoadRoute) {
+    const map = mapRef.current;
+    if (!map?.isStyleLoaded()) return;
+    const source = map.getSource('selected-road-route') as
+      GeoJSONSource | undefined;
+    source?.setData({
+      type: 'Feature',
+      properties: {},
+      geometry: route?.geometry ?? { type: 'LineString', coordinates: [] },
+    });
+  }
+
+  function frameRoadRoute(route: RoadRoute) {
+    const map = mapRef.current;
+    const first = route.geometry.coordinates[0];
+    if (!map || !first) return;
+    const bounds = new maplibregl.LngLatBounds(
+      first as [number, number],
+      first as [number, number],
+    );
+    for (const coordinate of route.geometry.coordinates.slice(1))
+      bounds.extend(coordinate as [number, number]);
+    map.fitBounds(bounds, {
+      padding: { top: 135, right: 42, bottom: 42, left: 42 },
+      maxZoom: 15,
+      duration: 700,
+    });
+  }
+
+  async function loadRoadRoute(place: Place) {
+    const request = ++routeRequest.current;
+    setRoadRoute(undefined);
+    setRoadRouteStatus('loading');
+    drawRoadRoute(undefined);
+    try {
+      const response = await fetch(`${API}/api/v1/routes/path`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          origin: {
+            latitude: searchCenter.current[1],
+            longitude: searchCenter.current[0],
+          },
+          destination: {
+            latitude: place.latitude,
+            longitude: place.longitude,
+          },
+        }),
+      });
+      if (!response.ok) throw new Error();
+      const route = ((await response.json()) as { data: RoadRoute }).data;
+      if (request !== routeRequest.current) return;
+      setRoadRoute(route);
+      setRoadRouteStatus('idle');
+      drawRoadRoute(route);
+      frameRoadRoute(route);
+    } catch {
+      if (request !== routeRequest.current) return;
+      setRoadRouteStatus('error');
+      drawRoadRoute(undefined);
+    }
+  }
+
+  function clearRoadRoute() {
+    routeRequest.current += 1;
+    setRoadRoute(undefined);
+    setRoadRouteStatus('idle');
+    drawRoadRoute(undefined);
+  }
+
   function selectPlace(place: Place) {
     setSelected(place);
     mapRef.current?.flyTo({
       center: [place.longitude, place.latitude],
       zoom: 15,
     });
+    void loadRoadRoute(place);
   }
 
   async function search(
@@ -138,6 +238,7 @@ export default function Home() {
     lon = searchCenter.current[0],
   ) {
     setStatus('loading');
+    clearRoadRoute();
     const params = new URLSearchParams({
       q: query,
       lat: String(lat),
@@ -214,6 +315,7 @@ export default function Home() {
     searchCenter.current = LONG_BEACH_MEAN_CENTER;
     setLocationQuery('');
     setLocationLabel('Long Beach mean center');
+    clearRoadRoute();
     const map = mapRef.current;
     if (map) {
       map.fitBounds(
@@ -235,6 +337,7 @@ export default function Home() {
   ) {
     searchCenter.current = coordinates;
     setLocationLabel(label);
+    clearRoadRoute();
     const map = mapRef.current;
     if (!map) return;
     map.flyTo({ center: coordinates, zoom });
@@ -300,6 +403,38 @@ export default function Home() {
       center: LONG_BEACH_MEAN_CENTER,
       zoom: 12,
     });
+    mapRef.current.on('load', () => {
+      mapRef.current?.addSource('selected-road-route', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          properties: {},
+          geometry: { type: 'LineString', coordinates: [] },
+        },
+      });
+      mapRef.current?.addLayer({
+        id: 'selected-road-route-casing',
+        type: 'line',
+        source: 'selected-road-route',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': '#103c46',
+          'line-width': 8,
+          'line-opacity': 0.82,
+        },
+      });
+      mapRef.current?.addLayer({
+        id: 'selected-road-route-line',
+        type: 'line',
+        source: 'selected-road-route',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: {
+          'line-color': '#57c7ff',
+          'line-width': 4,
+          'line-opacity': 1,
+        },
+      });
+    });
     mapRef.current.addControl(
       new maplibregl.NavigationControl(),
       'bottom-right',
@@ -337,7 +472,8 @@ export default function Home() {
         event.stopPropagation();
         selectPlace(place);
       });
-      marker.getElement().title = `Double-click to select ${place.name}`;
+      marker.getElement().addEventListener('click', () => selectPlace(place));
+      marker.getElement().title = `Click to select ${place.name} and show the road pathway`;
       return marker;
     });
   }, [places, selected, distanceUnit]);
@@ -347,7 +483,7 @@ export default function Home() {
       <header>
         <div>
           <span className="eyebrow">ATLAS / DISCOVERY</span>
-          <h1>Find what is nearby.</h1>
+          <h1>Find what is nearby in LB.</h1>
         </div>
         <p>Text relevance, proximity, and popularity—ranked transparently.</p>
       </header>
@@ -444,8 +580,15 @@ export default function Home() {
                 className={`result ${selected?.id === place.id ? 'active' : ''}`}
                 onClick={() => selectPlace(place)}
               >
-                <span className="rank">
+                <span
+                  className="rank rank-explanation"
+                  data-tooltip={rankingExplanation(place)}
+                  title={rankingExplanation(place)}
+                  aria-label={`Rank ${index + 1}. ${rankingExplanation(place)}`}
+                  tabIndex={0}
+                >
                   {String(index + 1).padStart(2, '0')}
+                  <small>{place.score?.toFixed(3) ?? '—'}</small>
                 </span>
                 <span>
                   <b>{place.name}</b>
@@ -469,6 +612,29 @@ export default function Home() {
           >
             ⌂ Home
           </button>
+          {selected && roadRouteStatus !== 'idle' && !roadRoute && (
+            <section className="road-route-widget" aria-live="polite">
+              <span className="eyebrow">ROAD PATHWAY</span>
+              <b>{selected.name}</b>
+              <p>
+                {roadRouteStatus === 'loading'
+                  ? 'Calculating the drivable route from the blue origin…'
+                  : 'The road pathway is temporarily unavailable.'}
+              </p>
+            </section>
+          )}
+          {selected && roadRoute && (
+            <section className="road-route-widget" aria-live="polite">
+              <span className="eyebrow">ROAD PATHWAY</span>
+              <b>
+                <i className="origin-dot" /> {locationLabel} → {selected.name}
+              </b>
+              <p>
+                {formatDistance(roadRoute.distanceM, distanceUnit)} ·{' '}
+                {formatDuration(roadRoute.durationS)}
+              </p>
+            </section>
+          )}
           <a
             className="data-attribution"
             href="https://www.openstreetmap.org/copyright"
@@ -480,7 +646,13 @@ export default function Home() {
         </div>
         {selected && (
           <article className="detail">
-            <button aria-label="Close" onClick={() => setSelected(undefined)}>
+            <button
+              aria-label="Close"
+              onClick={() => {
+                setSelected(undefined);
+                clearRoadRoute();
+              }}
+            >
               ×
             </button>
             <span className="eyebrow">PLACE DETAIL</span>
@@ -503,7 +675,14 @@ export default function Home() {
               </div>
               <div>
                 <dt>Rank score</dt>
-                <dd>{selected.score?.toFixed(3) ?? '—'}</dd>
+                <dd
+                  className="score-explanation"
+                  data-tooltip={rankingExplanation(selected)}
+                  title={rankingExplanation(selected)}
+                  tabIndex={0}
+                >
+                  {selected.score?.toFixed(3) ?? '—'} <span>ⓘ</span>
+                </dd>
               </div>
             </dl>
           </article>

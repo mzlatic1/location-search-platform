@@ -1,11 +1,28 @@
 # Post-compact handoff
 
-The app at `http://localhost:3000` now contains 4,485 actual named Long Beach places and
-uses CARTO Voyager, a light-blue origin pin, an amber selected-result marker, a Home
-control, a preloaded category list, imperial/metric display, and marker double-click
-selection. The API enriches each result batch through OSRM's driving table; an end-to-end
-37-result check returned 37 road-network distances. After `/compact`, first have the user
-review those interactions in the browser. If accepted, the intentionally remaining
-portfolio-evidence step is the indexed EXPLAIN/k6 procedure at representative 100K+
-scale plus a real UI screenshot; record only measured results in
-`docs/database-indexes.md` and do not redesign the architecture first.
+The app at `http://localhost:3000` contains 4,485 actual named Long Beach places and is
+running from rebuilt production containers. The current review build uses CARTO Voyager,
+a light-blue origin pin, amber selected-result marker, Home control, preloaded categories,
+imperial/metric display, and OSRM road-network distances.
+
+The latest critique added:
+
+- the heading **Find what is nearby in LB.**;
+- single-click marker selection while preserving panel and double-click selection;
+- `POST /api/v1/routes/path`, which requests full GeoJSON driving geometry from OSRM;
+- a selected road-path line framed on the map plus a route widget with origin,
+  destination, distance, and estimated drive time; and
+- hover/focus explanations for every list rank score and the detail score, showing the
+  55% text + 25% road proximity + 15% popularity + 5% category formula and actual
+  normalized components.
+
+Verification completed: Prettier, ESLint, all workspace TypeScript checks, 14 unit tests,
+and production Docker API/web builds passed. The live path check from the Long Beach mean
+center returned a 6,322.7 m driving route with 262 coordinates, and all compose services
+are running.
+
+First after the next `/compact`, have the user click a result marker and confirm the
+light-blue pathway, framing, route widget, and score hover explanation. If accepted, the
+intentionally remaining portfolio-evidence step is the indexed EXPLAIN/k6 procedure at
+representative 100K+ scale plus a real UI screenshot. Record only measured results in
+`docs/database-indexes.md`; do not redesign the architecture first.

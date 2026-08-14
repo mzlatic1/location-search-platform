@@ -87,7 +87,20 @@ describe('API', () => {
     const app = buildApp({
       repository: new Repo(),
       cache: new MemoryCache(),
-      roadDistance: { distances: async () => [1450] },
+      roadDistance: {
+        distances: async () => [1450],
+        route: async () => ({
+          distanceM: 1450,
+          durationS: 240,
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [-118.16, 33.78],
+              [-118.1, 33.7],
+            ],
+          },
+        }),
+      },
     });
     const r = await app.inject({
       method: 'POST',
@@ -106,6 +119,48 @@ describe('API', () => {
     expect(r.statusCode).toBe(200);
     expect(r.json()).toMatchObject({
       data: [{ id: sample.id, distanceM: 1450 }],
+      profile: 'driving',
+      calculation: 'road-network',
+    });
+    await app.close();
+  });
+  it('returns a driving path from the road network service', async () => {
+    const app = buildApp({
+      repository: new Repo(),
+      cache: new MemoryCache(),
+      roadDistance: {
+        distances: async () => [1450],
+        route: async () => ({
+          distanceM: 1450,
+          durationS: 240,
+          geometry: {
+            type: 'LineString',
+            coordinates: [
+              [-118.16, 33.78],
+              [-118.1, 33.7],
+            ],
+          },
+        }),
+      },
+    });
+    const r = await app.inject({
+      method: 'POST',
+      url: '/api/v1/routes/path',
+      payload: {
+        origin: { latitude: 33.78, longitude: -118.16 },
+        destination: {
+          latitude: sample.latitude,
+          longitude: sample.longitude,
+        },
+      },
+    });
+    expect(r.statusCode).toBe(200);
+    expect(r.json()).toMatchObject({
+      data: {
+        distanceM: 1450,
+        durationS: 240,
+        geometry: { type: 'LineString' },
+      },
       profile: 'driving',
       calculation: 'road-network',
     });

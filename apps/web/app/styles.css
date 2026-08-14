@@ -124,7 +124,7 @@ aside {
 .result {
   width: 100%;
   display: grid;
-  grid-template-columns: 34px 1fr auto;
+  grid-template-columns: 46px 1fr auto;
   gap: 10px;
   text-align: left;
   align-items: center;
@@ -157,6 +157,54 @@ aside {
 .rank {
   font-family: monospace;
   color: var(--muted);
+}
+.rank small {
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: 0.58rem;
+  letter-spacing: 0;
+}
+.rank-explanation,
+.score-explanation {
+  position: relative;
+  cursor: help;
+}
+.rank-explanation::after,
+.score-explanation::after {
+  position: absolute;
+  z-index: 10;
+  display: none;
+  width: 260px;
+  padding: 10px 12px;
+  border: 1px solid var(--ink);
+  background: #fffdf8;
+  box-shadow: 4px 4px 0 rgba(16, 60, 70, 0.2);
+  color: var(--ink);
+  content: attr(data-tooltip);
+  font:
+    0.72rem/1.45 Inter,
+    sans-serif;
+  text-transform: none;
+  letter-spacing: 0;
+  pointer-events: none;
+}
+.rank-explanation::after {
+  top: calc(100% + 8px);
+  left: 0;
+}
+.score-explanation::after {
+  right: 0;
+  bottom: calc(100% + 8px);
+}
+.rank-explanation:hover::after,
+.rank-explanation:focus-visible::after,
+.score-explanation:hover::after,
+.score-explanation:focus-visible::after {
+  display: block;
+}
+.score-explanation span {
+  color: var(--muted);
+  font-size: 0.72rem;
 }
 .map {
   position: relative;
@@ -191,6 +239,38 @@ aside {
 .map-home:hover,
 .map-home:focus-visible {
   background: #dff4fc;
+}
+.road-route-widget {
+  position: absolute;
+  z-index: 2;
+  top: 60px;
+  left: 12px;
+  display: grid;
+  width: min(390px, calc(100% - 24px));
+  gap: 6px;
+  border: 1px solid var(--ink);
+  background: rgba(255, 253, 248, 0.96);
+  padding: 13px 15px;
+  box-shadow: 5px 5px 0 rgba(16, 60, 70, 0.2);
+}
+.road-route-widget b {
+  overflow: hidden;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.road-route-widget p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+.origin-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border: 1px solid var(--ink);
+  border-radius: 50%;
+  background: #57c7ff;
 }
 .data-attribution {
   position: absolute;
