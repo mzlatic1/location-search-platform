@@ -1,0 +1,28 @@
+{
+  "name": "location-search-platform",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.15.1",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @location/api --filter @location/web dev",
+    "build": "pnpm -r build",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r typecheck",
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "import:data": "pnpm --filter @location/api import:data"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.33.0",
+    "@types/node": "^22.17.2",
+    "eslint": "^9.33.0",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.4",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.39.1",
+    "vitest": "^3.2.4"
+  }
+}
